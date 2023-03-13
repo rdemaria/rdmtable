@@ -269,7 +269,6 @@ class RDMTable:
             row_index = self.loc[rows]
             view = View(self._data, row_index)
 
-
         # select cols
         if cols is None or cols == slice(None, None, None):
             col_list = self._col_names
