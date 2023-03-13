@@ -213,22 +213,21 @@ class RDMTable:
         return self._data.__contains__()
 
     def __setitems__(self, key, val):
-        if len(val)!=self._nrows:
+        if len(val) != self._nrows:
             raise ValueError("Wrong number of rows")
         self._col_names.append(key)
         self._data[key] = val
-        if key==self._index:
-            self._index_cache=None
+        if key == self._index:
+            self._index_cache = None
 
     def __delitems__(self, key, val):
         self._col_names.remove(key)
         del self._data[key]
 
-    def __setattr__(self,key,val):
-        if key=='_index':
-            self._index_cache=None
-        super().__setattr__(key,val)
-
+    def __setattr__(self, key, val):
+        if key == "_index":
+            self._index_cache = None
+        super().__setattr__(key, val)
 
     def __repr__(self):
         n = self._nrows
@@ -244,13 +243,14 @@ class RDMTable:
     def __getitem__(self, args):
         if type(args) is str and args in self._data:
             return self._data[args]
-        rows = None
-        cols = None
         if type(args) is tuple:  # multiple args
             if len(args) == 0:
                 cols = None
                 rows = None
-            elif len(args) ==1:
+            elif len(args) == 1:
+                cols = args[0]
+                rows = None
+            elif len(args) == 2:
                 cols = args[0]
                 rows = args[1]
             else:
@@ -258,6 +258,7 @@ class RDMTable:
                 rows = args[1:]
         else:  # one arg
             cols = args
+            rows = None
         return self._get_rows_cols(rows, cols)
 
     def _get_view_col_list(self, rows, cols):
@@ -267,6 +268,7 @@ class RDMTable:
         else:
             row_index = self.loc[rows]
             view = View(self._data, row_index)
+
 
         # select cols
         if cols is None or cols == slice(None, None, None):
@@ -292,7 +294,9 @@ class RDMTable:
             if self._index not in col_list:
                 col_list.insert(0, self._index)
             data = {cc: eval(cc, gblmath, view) for cc in col_list}
-            return self.__class__(data, index=self._index, count_sep=self._count_sep)  # table
+            return self.__class__(
+                data, index=self._index, count_sep=self._count_sep
+            )  # table
 
     def show(
         self,

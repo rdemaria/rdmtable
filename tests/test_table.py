@@ -12,32 +12,31 @@ data = {
 
 t = RDMTable(data)
 
-# Column selection
-t.betx  # return array
-t["betx"]  # return array
-t["betx", 0]  # return scalar
-t["sqrt(betx)"]  # return array
-t["betx bety"]  # return table
-t[["betx", "bety"]]  # return table
-t["sqrt(betx)>3 sqrt(bety)"]  # return table
+def test_column_selection():
+    assert len(t.betx)==len(data['betx'])
+    assert t["betx", 0] == data['betx'][0]
+    assert t["sqrt(betx)"][1]==np.sqrt(data['betx'][1])
+    assert t["betx bety"].betx[0] == t.betx[0]
+    assert t[["betx", "bety"]].betx[0] == t.betx[0]
+    assert t["sqrt(betx)>3 sqrt(bety)"]['sqrt(betx)>3'][0]==(np.sqrt(data['betx'][0])>3)
 
 
-# Row selection
-t[:, 1]  # return a new table with row
-t[:, [0, 2]]  # return a new table with 3 rows
-t[:, t.s > 1]  # table with a selection of rows
+def test_row_selection():
+    assert t[:, 1].betx==data['betx'][1]
+    assert t[:, [0, 2]].betx[1]==data['betx'][2]
+    assert t[:, t.s > 1].betx[1]==data['betx'][t.s > 1][1]
 
-t[:, "ip1"]  # table with rows fullmathcing name
-t[:, "ip[23]"]  # table with rows mathcing name
-t[:, "ip.*##1"]  # == t[:,'ip.*'][:,1]
-t[:, "notthere"]  # empty table
-t[:, ["ip1", "ip2"]]  # table with row selection
+    assert t[:, "ip1"].betx[0]==data['betx'][0]
+    assert t[:, "ip[23]"].betx[0]==data['betx'][1]
+    assert t[:, "ip.*##1"].betx[0]==data['betx'][1]
+    assert t[:, "notthere"]._nrows==0
+    assert t[:, ["ip1", "ip2"]].betx[0]==data['betx'][0]
 
-t[:, 1:4:3]  # return table slice
-t[:, 1.5:2.5:"s"]  # return t.s>=1.5 & t.<=4
-t[:, "ip1":"ip3"]  # return t from first 'ip1' to last 'ip3' in t.name
-t[:, "ip.*##1":"ip.*##2"]  # return t from first 'ip2' to third 'ip3'
-t[:, "ip2%%-1":"ip2%%+1"]  # return t from first 'ip1' to last 'ip3' in t.name
-t[:, "ip1":"ip3":"name"]  # return t from first 'a' to last 'b' in t.name
-t[:, None] # copy
-t[:, :] # copy
+    assert t[:, 1:4:3].betx[0] == data['betx'][1]
+    assert t[:, 1.5:2.5:"s"].betx[0] == data['betx'][1]
+    assert t[:, "ip1":"ip3"].betx[2] == data['betx'][2]
+    assert t[:, "ip.*##1":"ip.*##2"].betx[0] == data['betx'][1]
+    assert t[:, "ip2%%-1":"ip2%%+1"].betx[0] == data['betx'][0]
+    assert t[:, "ip1":"ip3":"name"].betx[0]  == data['betx'][0]
+    assert t[:, None].betx[0]  == data['betx'][0]
+    assert t[:, :].betx[0]  == data['betx'][0]
