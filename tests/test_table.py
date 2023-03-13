@@ -1,6 +1,6 @@
 import numpy as np
 
-from ttable import RDMTable
+from rdmtable import RDMTable
 
 data = {
     "name": np.array(["ip1", "ip2", "ip3"]),
@@ -10,7 +10,7 @@ data = {
 }
 
 
-t = TTable(data)
+t = RDMTable(data)
 
 # Column selection
 t.betx  # return array

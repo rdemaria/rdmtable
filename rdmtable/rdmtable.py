@@ -292,7 +292,7 @@ class RDMTable:
             if self._index not in col_list:
                 col_list.insert(0, self._index)
             data = {cc: eval(cc, gblmath, view) for cc in col_list}
-            return TTable(data, index=self._index, count_sep=self._count_sep)  # table
+            return self.__class__(data, index=self._index, count_sep=self._count_sep)  # table
 
     def show(
         self,
