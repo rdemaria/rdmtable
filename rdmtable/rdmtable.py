@@ -48,7 +48,10 @@ class Loc:
             else:
                 mask[key] = True
         elif isinstance(key, str):
-            mask[:] = self.table._get_name_mask(key, self.table._index)
+            if self.table._offset_sep or self.table._count_sep in key:
+                mask[:] = self[key:key]
+            else:
+                mask[:] = self.table._get_name_mask(key, self.table._index)
         elif isinstance(key, slice):
             ia = key.start
             ib = key.stop
