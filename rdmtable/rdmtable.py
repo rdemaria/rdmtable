@@ -48,10 +48,7 @@ class Loc:
             else:
                 mask[key] = True
         elif isinstance(key, str):
-            if self.table._offset_sep or self.table._count_sep in key:
-                mask[:] = self[key:key]
-            else:
-                mask[:] = self.table._get_name_mask(key, self.table._index)
+            mask[:] = self.table._get_name_mask(key, self.table._index)
         elif isinstance(key, slice):
             ia = key.start
             ib = key.stop
@@ -96,6 +93,22 @@ class View:
         return len(self.data[k])
 
 
+class RowView:
+    def __init__(self, table):
+        self.table = table
+
+    def __getitem__(self, rows):
+        return self.table._get_rows_cols(rows, None)
+
+
+class ColView:
+    def __init__(self, table):
+        self.table = table
+
+    def __getitem__(self, cols):
+        return self.table._get_rows_cols(None, cols, force_table=True)
+
+
 class RDMTable:
     def __init__(
         self,
@@ -118,6 +131,8 @@ class RDMTable:
         nrows = set(len(self._data[cc]) for cc in self._col_names)
         assert len(nrows) == 1
         self._nrows = nrows.pop()
+        self.rows = RowView(self)
+        self.cols = ColView(self)
 
     def _get_index(self):
         if self._index in self._data:
@@ -195,7 +210,10 @@ class RDMTable:
         return np.array(lst, dtype=int)
 
     def __getattr__(self, key):
-        return self._data[key]
+        try:
+            return self._data[key]
+        except KeyError:
+            raise AttributeError
 
     def __len__(self):
         return len(self._data)
@@ -232,14 +250,17 @@ class RDMTable:
             self._index_cache = None
         super().__setattr__(key, val)
 
+    def __call__(self, cols):
+        return self._get_rows_cols(None, cols)
+
     def __repr__(self):
         n = self._nrows
         c = len(self._data)
         ns = "s" if n != 1 else ""
         cs = "s" if c != 1 else ""
         out = [f"{self.__class__.__name__}: {n} row{ns}, {c} col{cs}"]
-        show = self.show(output=str)
-        if len(show) < 10000:
+        if self._nrows < 10000:
+            show = self.show(output=str)
             out.append(show)
         return "\n".join(out)
 
@@ -251,17 +272,14 @@ class RDMTable:
                 cols = None
                 rows = None
             elif len(args) == 1:
-                cols = args[0]
-                rows = None
-            elif len(args) == 2:
-                cols = args[0]
-                rows = args[1]
-            else:
-                cols = args[0]
-                rows = args[1:]
+                cols = None
+                rows = args[0]
+            elif len(args) > 1:
+                cols = args[-1]
+                rows = args[:-1]
         else:  # one arg
-            cols = args
-            rows = None
+            cols = None
+            rows = args
         return self._get_rows_cols(rows, cols)
 
     def _get_view_col_list(self, rows, cols):
@@ -282,11 +300,11 @@ class RDMTable:
 
         return view, col_list
 
-    def _get_rows_cols(self, rows, cols):
+    def _get_rows_cols(self, rows, cols, force_table=False):
         view, col_list = self._get_view_col_list(rows, cols)
 
         # return data
-        if len(col_list) == 1:
+        if len(col_list) == 1 and not force_table:
             cc = eval(col_list[0], gblmath, view)
             if len(cc) == 1:
                 return cc[0]  # scalar
@@ -309,6 +327,7 @@ class RDMTable:
         output=None,
         digits=6,
         fixed="g",
+        header=True,
     ):
         view, col_list = self._get_view_col_list(rows, cols)
 
@@ -325,7 +344,7 @@ class RDMTable:
         width = 0
         # maxwidth=10000000 if maxwidth is None else maxwidth
         fmt = []
-        header = []
+        header_line = []
         for cc in col_list:
             if cc in view:
                 coldata = view[cc]
@@ -344,10 +363,12 @@ class RDMTable:
                     fmt.append("%%-%ds" % (colwidth))
                 else:
                     fmt.append("%%%ds" % colwidth)
-                header.append(fmt[-1] % cc)
+                header_line.append(fmt[-1] % cc)
                 data.append(col)
 
-        result = [" ".join(header)]
+        result = []
+        if header:
+            result.append(" ".join(header_line))
         for ii in range(len(col)):
             row = " ".join([ff % col[ii] for ff, col in zip(fmt, data)])
             result.append(row)

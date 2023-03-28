@@ -14,11 +14,11 @@ t = RDMTable(data)
 
 def test_column_selection():
     assert len(t.betx)==len(data['betx'])
-    assert t["betx", 0] == data['betx'][0]
-    assert t["sqrt(betx)"][1]==np.sqrt(data['betx'][1])
-    assert t["betx bety"].betx[0] == t.betx[0]
-    assert t[["betx", "bety"]].betx[0] == t.betx[0]
-    assert t["sqrt(betx)>3 sqrt(bety)"]['sqrt(betx)>3'][0]==(np.sqrt(data['betx'][0])>3)
+    assert t[0,"betx"] == data['betx'][0]
+    assert t("sqrt(betx)")[1]==np.sqrt(data['betx'][1])
+    assert t("betx bety").betx[0] == t.betx[0]
+    assert t(["betx", "bety"]).betx[0] == t.betx[0]
+    assert t("sqrt(betx)>3 sqrt(bety)")['sqrt(betx)>3'][0]==(np.sqrt(data['betx'][0])>3)
 
 
 def test_row_selection():
