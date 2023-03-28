@@ -37,6 +37,8 @@ class Loc:
         mask = np.zeros(self.table._nrows, dtype=bool)
         if isinstance(key, int):
             mask[key] = True
+        elif isinstance(key, str):
+            mask[:] = self.table._get_name_mask(key, self.table._index)
         elif hasattr(key, "dtype"):
             if key.dtype.kind in "SU":
                 mask[self.table._get_names_indices(key)] = True
@@ -47,8 +49,6 @@ class Loc:
                 mask[self.table._get_names_indices(key)] = True
             else:
                 mask[key] = True
-        elif isinstance(key, str):
-            mask[:] = self.table._get_name_mask(key, self.table._index)
         elif isinstance(key, slice):
             ia = key.start
             ib = key.stop
@@ -93,12 +93,19 @@ class View:
         return len(self.data[k])
 
 
+
 class RowView:
     def __init__(self, table):
         self.table = table
 
     def __getitem__(self, rows):
         return self.table._get_rows_cols(rows, None)
+
+    def __repr__(self):
+        return f"<{self.table._nrows} rows>"
+
+    def __iter__(self):
+        return iter(self.table._data[self.table._index])
 
 
 class ColView:
@@ -107,6 +114,10 @@ class ColView:
 
     def __getitem__(self, cols):
         return self.table._get_rows_cols(None, cols, force_table=True)
+
+    def __repr__(self):
+        return '<'+" ".join(self.table._col_names)+'>'
+
 
 
 class RDMTable:
