@@ -1,5 +1,6 @@
 import re
 import numpy as np
+import pathlib
 
 gblmath = {"np": np}
 for k, fu in np.__dict__.items():
@@ -20,19 +21,19 @@ def _to_str(arr, digits, fixed="g"):
         return arr.astype("U")
 
 
-class Loc:
+class Mask:
     def __init__(self, table):
         self.table = table
 
     def __getitem__(self, key):
         """
-        t.loc[1] -> row
-        t.loc['a'] -> pattern
-        l.loc[10:20]-> range
-        l.loc['a':'b'] -> name range
-        l.loc['a':'b':'myname'] -> name range with 'myname' column
-        l.loc[-2:2:'x'] -> name value range with 'x' column
-        l.loc[-2:2:'x',...] -> & combinations
+        t.mask[1] -> row
+        t.mask['a'] -> pattern
+        l.mask[10:20]-> range
+        l.mask['a':'b'] -> name range
+        l.mask['a':'b':'myname'] -> name range with 'myname' column
+        l.mask[-2:2:'x'] -> name value range with 'x' column
+        l.mask[-2:2:'x',...] -> & combinations
         """
         mask = np.zeros(self.table._nrows, dtype=bool)
         if isinstance(key, int):
@@ -93,7 +94,6 @@ class View:
         return len(self.data[k])
 
 
-
 class RowView:
     def __init__(self, table):
         self.table = table
@@ -116,8 +116,11 @@ class ColView:
         return self.table._get_rows_cols(None, cols, force_table=True)
 
     def __repr__(self):
-        return '<'+" ".join(self.table._col_names)+'>'
+        return "<" + " ".join(self.table._col_names) + ">"
 
+    @property
+    def names(self):
+        return self.table._col_names
 
 
 class RDMTable:
@@ -136,7 +139,7 @@ class RDMTable:
         self._index = index
         self._count_sep = count_sep
         self._offset_sep = offset_sep
-        self.loc = Loc(self)
+        self.mask = Mask(self)
         self._index_cache = index_cache
         self._regex_flags = re.IGNORECASE
         nrows = set(len(self._data[cc]) for cc in self._col_names)
@@ -221,15 +224,17 @@ class RDMTable:
         return np.array(lst, dtype=int)
 
     def __getattr__(self, key):
-        try:
+        if key in self._data:
             return self._data[key]
-        except KeyError:
-            raise AttributeError
+        else:
+            raise AttributeError(f"Cannot find `{key}` in table")
 
     def __len__(self):
         return len(self._data)
 
-    def keys(self):
+    def keys(self, exclude_columns=False):
+        if exclude_columns:
+            return list(set(self._data.keys()) - set(self._col_names))
         return self._data.keys()
 
     def values(self):
@@ -244,7 +249,7 @@ class RDMTable:
     def __contains__(self):
         return self._data.__contains__()
 
-    def __setitems__(self, key, val):
+    def __setitem__(self, key, val):
         if len(val) != self._nrows:
             raise ValueError("Wrong number of rows")
         self._col_names.append(key)
@@ -252,7 +257,7 @@ class RDMTable:
         if key == self._index:
             self._index_cache = None
 
-    def __delitems__(self, key, val):
+    def __delitem__(self, key, val):
         self._col_names.remove(key)
         del self._data[key]
 
@@ -298,7 +303,7 @@ class RDMTable:
         if rows is None:
             view = self._data
         else:
-            row_index = self.loc[rows]
+            row_index = self.mask[rows]
             view = View(self._data, row_index)
 
         # select cols
@@ -316,7 +321,13 @@ class RDMTable:
 
         # return data
         if len(col_list) == 1 and not force_table:
-            cc = eval(col_list[0], gblmath, view)
+            try:
+                cc = eval(col_list[0], gblmath, view)
+            except NameError:
+                raise KeyError(
+                    f"Column `{col_list[0]}` could not be found or "
+                    "is not a valid expression"
+                )
             if len(cc) == 1:
                 return cc[0]  # scalar
             else:
@@ -324,9 +335,23 @@ class RDMTable:
         else:
             if self._index not in col_list:
                 col_list.insert(0, self._index)
-            data = {cc: eval(cc, gblmath, view) for cc in col_list}
+            data = {}
+            for cc in col_list:
+                try:
+                    data[cc] = eval(cc, gblmath, view)
+                except NameError:
+                    raise KeyError(
+                        f"Column `{cc}` could not be found or "
+                        "is not a valid expression"
+                    )
+            for kk in self.keys(exclude_columns=True):
+                data[kk] = self._data[kk]
             return self.__class__(
-                data, index=self._index, count_sep=self._count_sep
+                data,
+                index=self._index,
+                count_sep=self._count_sep,
+                col_names=col_list,
+                offset_sep=self._offset_sep,
             )  # table
 
     def show(
