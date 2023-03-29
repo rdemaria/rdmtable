@@ -39,7 +39,7 @@ def test_row_selection_names():
 
 def test_row_selection_ranges():
     assert t.rows[1:4:3].betx[0] == data['betx'][1]
-    assert t.rows[1.5:2.5:"s"].betx[0] == data['betx'][1]
+    assert t.rows["s":1.5:2.5].betx[0] == data['betx'][1]
     assert t.rows["ip1":"ip3"].betx[2] == data['betx'][2]
     assert t.rows["ip.*##1":"ip.*##2"].betx[0] == data['betx'][1]
     assert t.rows["ip2%%-1":"ip2%%+1"].betx[0] == data['betx'][0]

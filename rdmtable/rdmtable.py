@@ -7,6 +7,13 @@ for k, fu in np.__dict__.items():
     if type(fu) is np.ufunc:
         gblmath[k] = fu
 
+def is_real(num):
+    try:
+        float(num)
+        return True
+    except:
+        return False
+
 
 def _to_str(arr, digits, fixed="g"):
     """covert array to string repr"""
@@ -54,7 +61,17 @@ class Mask:
             ia = key.start
             ib = key.stop
             ic = key.step
-            if isinstance(ia, str) or isinstance(ib, str):
+            if isinstance(ia, str) and (is_real(ib) or is_real(ic)):
+                col = self.table._data[ia]
+                if ib is None and ia is None:
+                    mask |= True
+                elif ib is not None and ic is None:
+                    mask |= col <= ic
+                elif ic is not None and ib is None:
+                    mask |= col >= ib
+                else:
+                    mask |= (col >= ib) & (col <= ic)
+            elif isinstance(ia, str) or isinstance(ib, str):
                 if ic is None:
                     ic = self.table._index
                 if ia is not None:
@@ -62,16 +79,6 @@ class Mask:
                 if ib is not None:
                     ib = self.table._get_name_indices(ib, ic)[-1] + 1
                 mask[ia:ib] = True
-            elif isinstance(ic, str):
-                col = self.table._data[ic]
-                if ia is None and ib is None:
-                    mask |= True
-                elif ia is not None and ib is None:
-                    mask |= col <= ib
-                elif ib is not None and ia is None:
-                    mask |= col >= ia
-                else:
-                    mask |= (col >= ia) & (col <= ib)
             else:
                 mask[ia:ib:ic] = True
         elif isinstance(key, tuple):
