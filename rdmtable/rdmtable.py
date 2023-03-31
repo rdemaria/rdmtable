@@ -1,6 +1,7 @@
 import re
 import numpy as np
 import pathlib
+from collections import namedtuple
 
 gblmath = {"np": np}
 for k, fu in np.__dict__.items():
@@ -88,6 +89,14 @@ class Mask:
         return mask
 
 
+class IMask:
+    def __init__(self, table):
+        self.table = table
+
+    def __getitem__(self, key):
+        return np.where(self.table.mask[key])[0]
+
+
 class View:
     def __init__(self, data, index):
         self.data = data
@@ -112,7 +121,8 @@ class RowView:
         return f"<{self.table._nrows} rows>"
 
     def __iter__(self):
-        return iter(self.table._data[self.table._index])
+        nt=namedtuple('Row', self.table._col_names)
+        return map(nt._name,zip(*[self.table._data[cc] for cc in self.table._col_names])
 
 
 class ColView:
@@ -147,6 +157,7 @@ class RDMTable:
         self._count_sep = count_sep
         self._offset_sep = offset_sep
         self.mask = Mask(self)
+        self.imask = IMask(self)
         self._index_cache = index_cache
         self._regex_flags = re.IGNORECASE
         nrows = set(len(self._data[cc]) for cc in self._col_names)
