@@ -122,7 +122,7 @@ class RowView:
 
     def __iter__(self):
         nt=namedtuple('Row', self.table._col_names)
-        return map(nt._name,zip(*[self.table._data[cc] for cc in self.table._col_names])
+        return map(nt._name,zip(*[self.table._data[cc] for cc in self.table._col_names]))
 
 
 class ColView:
@@ -289,7 +289,7 @@ class RDMTable:
 
     def __repr__(self):
         n = self._nrows
-        c = len(self._data)
+        c = len(self._col_names)
         ns = "s" if n != 1 else ""
         cs = "s" if c != 1 else ""
         out = [f"{self.__class__.__name__}: {n} row{ns}, {c} col{cs}"]
